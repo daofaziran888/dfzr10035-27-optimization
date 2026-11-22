@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers import ROUTERS
+from app.schemas import ReceiptPayload
 from app.store import store
 from app.services import SERVICE_REGISTRY
 
@@ -93,6 +94,34 @@ def chain_recovery_rate():
     """链路8：重放恢复率（跨 retry_queue/call_log）"""
     from app.services.retry_queue import RetryQueueService
     return RetryQueueService().calc_recovery_rate()
+
+
+@app.post("/api/chain/collection-receipt")
+def chain_collection_receipt(payload: ReceiptPayload):
+    """成功采集回执登记：按数据段关联结案证据，同一成功调用只算一次补齐。"""
+    from app.services.retry_queue import RetryQueueService
+    return RetryQueueService().register_receipt(payload.调用编号, payload.数据段, payload.来源端点)
+
+
+@app.get("/api/chain/backfill-candidates")
+def chain_backfill_candidates():
+    """补采候选查询：待补采结案证据 + 历史失败记录，扣除已补到的区间。"""
+    from app.services.retry_queue import RetryQueueService
+    return {"candidates": RetryQueueService().backfill_candidates()}
+
+
+@app.get("/api/chain/lost-requests")
+def chain_lost_requests():
+    """失联请求统计：与治理报告汇总同源的实际待补范围。"""
+    from app.services.retry_queue import RetryQueueService
+    return RetryQueueService().lost_request_stats()
+
+
+@app.get("/api/chain/next-dispatch")
+def chain_next_dispatch():
+    """下一轮重放派发核对：逐段检查是否仍缺采、旧失败尝试是否已处理。"""
+    from app.services.retry_queue import RetryQueueService
+    return RetryQueueService().plan_next_dispatch()
 
 
 @app.get("/api/chain/subscription-chain")

@@ -29,3 +29,11 @@ class EntryPayload(BaseModel):
 class ActionPayload(BaseModel):
     action: str
     remark: str | None = None
+
+
+class ReceiptPayload(BaseModel):
+    """成功采集回执：调用编号用于去重（同一成功调用只算一次补齐），数据段用于关联结案证据。"""
+
+    调用编号: str
+    数据段: str
+    来源端点: str = ""
